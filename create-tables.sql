@@ -8,3 +8,7 @@ CREATE TABLE orders (
         REFERENCES products(id)
         ON DELETE CASCADE
 );
+
+ALTER TABLE products
+ADD COLUMN image_url TEXT,
+ADD COLUMN inventory_count INTEGER DEFAULT 0;

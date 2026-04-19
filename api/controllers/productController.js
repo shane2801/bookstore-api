@@ -1,14 +1,22 @@
-import * as  productService  from '../services/productService.js';
-import { createProductSchema } from '../validators/productValidator.js';
+import * as  productService from '../services/productService.js';
+import { createProductSchema, updateProductSchema } from '../validators/productValidator.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { HTTP_STATUS } from '../utils/httpStatus.js';
+import { uploadToCloudinary } from '../services/mediaService.js';
+
 
 export const getAllProducts = async (req, res) => {
     try {
         const products = await productService.getAllProducts();
-        res.json(products);
+
+        return successResponse(
+            res,
+            products,
+            'Products fetched successfully',
+            HTTP_STATUS.OK
+        );
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        return errorResponse(res, err.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 
@@ -18,19 +26,74 @@ export const getProductById = async (req, res) => {
 
         const product = await productService.getProductById(id);
 
-        // res.json(product);
-        return successResponse(res, product, 'Product fetched successfully', HTTP_STATUS.OK)
+        return successResponse(
+            res,
+            product,
+            'Product fetched successfully',
+            HTTP_STATUS.OK
+        );
     } catch (err) {
-        res.status(404).json({ error: err.message });
+        return errorResponse(res, err.message, HTTP_STATUS.NOT_FOUND);
     }
 };
 
 export const createProduct = async (req, res) => {
-    try {
-        const validated = createProductSchema.parse(req.body);
+        try {
+        let image_url = null;
 
-        const product = await productService.createProduct(validated.name, validated.price);
+        // console.log('FILE:', req.file);
+        if (req.file) {
+            const result = await uploadToCloudinary(req.file.buffer);
+            image_url = result.secure_url;
+        }
+
+        const data = {
+            ...req.body,
+            price: Number(req.body.price),
+            inventory_count: Number(req.body.inventory_count),
+            image_url
+        };
+
+
+        const validated = createProductSchema.parse(data);
+
+        const product = await productService.createProduct(validated);
+
         res.status(201).json(product);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+};
+
+
+export const updateProduct = async (req, res) => {
+     try {
+        const { id } = req.params;
+
+        let image_url;
+
+        // if new image uploaded → replace
+        if (req.file) {
+            const result = await uploadToCloudinary(req.file.buffer);
+            image_url = result.secure_url;
+        }
+
+        const data = {
+            ...req.body,
+            ...(req.body.price && { price: Number(req.body.price) }),
+            ...(req.body.inventory_count && {
+                inventory_count: Number(req.body.inventory_count)
+            }),
+            ...(image_url && { image_url })
+        };
+
+        console.log(data)
+
+        const validated = updateProductSchema.parse(data);
+
+        const updatedProduct = await productService.updateProduct(id, validated);
+
+        res.json(updatedProduct);
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -41,22 +104,16 @@ export const deleteProduct = async (req, res) => {
         const { id } = req.params;
 
         await productService.deleteProduct(id);
-        res.json({ message: 'Product deleted' });
+
+        return successResponse(
+            res,
+            null,
+            'Product deleted successfully',
+            HTTP_STATUS.OK
+        );
     } catch (err) {
-        res.status(404).json({ error: err.message });
+        return errorResponse(res, err.message, HTTP_STATUS.NOT_FOUND);
     }
 };
 
-export const updateProduct = async (req, res) => {
-    try {
-        const { id } = req.params;
 
-        const updatedProduct = await productService.updateProduct(id, req.body);
-        res.json(updatedProduct);
-    } catch (err) {
-        if (err.message === 'Product not found') {
-            return res.status(404).json({ error: err.message });
-        }
-        res.status(400).json({ error: err.message });
-    }
-};

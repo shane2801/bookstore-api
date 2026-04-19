@@ -17,23 +17,26 @@ import * as  productRepository  from '../models/productRepository.js';
 };
 
 // CREATE
- export const createProduct = async (name, price) => {
-    if (!name || !price) {
-        throw new Error('Missing fields');
+ export const createProduct = async (data) => {
+    return await productRepository.createProduct(data);
+};
+
+// UPDATE [PATCH]
+export const updateProduct = async (id, data) => {
+    const existingProduct = await productRepository.findProductById(id);
+
+    if (!existingProduct) {
+        throw new Error('Product not found');
     }
 
-    if (price <= 0) {
-        throw new Error('Price must be greater than 0');
-    }
-
-    return await productRepository.createProduct(name, price);
+    return await productRepository.updateProduct(id, data);
 };
 
 // DELETE
- export const deleteProduct = async (id) => {
-    const product = await productRepository.findProductById(id);
+export const deleteProduct = async (id) => {
+    const existingProduct = await productRepository.findProductById(id);
 
-    if (!product) {
+    if (!existingProduct) {
         throw new Error('Product not found');
     }
 
@@ -41,18 +44,3 @@ import * as  productRepository  from '../models/productRepository.js';
 };
 
 
-// UPDATE (PATCH-style)
-export const updateProduct = async (id, updates) => {
-    const product = await productRepository.findProductById(id);
-
-    if (!product) {
-        throw new Error('Product not found');
-    }
-
-
-    const updatedProduct = await productRepository.updateProduct(
-        id, updates
-    );
-
-    return updatedProduct;
-};

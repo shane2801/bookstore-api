@@ -60,10 +60,13 @@ Stores products and orders with relational structure.
 
 ## 📁 Project Structure
 
+
+```bash
 api/
 │
 ├── config/
-│ └── db.js
+│ ├── db.js
+│ └── env.js
 │
 ├── controllers/
 │ ├── productController.js
@@ -74,10 +77,8 @@ api/
 │ └── orderService.js
 │
 ├── repositories/
+│ ├── productRepository.js
 │ └── orderRepository.js
-│
-├── models/
-│ └── productModel.js
 │
 ├── validators/
 │ ├── productValidator.js
@@ -88,11 +89,9 @@ api/
 │ └── orders.js
 │
 ├── app.js
+├── start.js
 └── server.js
-
-
-
----
+```
 
 ## ⚙️ Setup Instructions
 

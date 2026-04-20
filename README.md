@@ -217,3 +217,121 @@ This project is actively evolving. Planned features include:
 The goal of this project is to simulate a real-world backend system, focusing on scalability, maintainability, and clean architecture principles.
 
 This is an ongoing project and will continue to grow with more advanced backend features.
+
+
+
+## 🖼️ Image Upload & Media Handling
+
+This API supports **image uploads for products** using a scalable, production-oriented architecture.
+
+### 🔧 How it works
+
+Product images are uploaded using `multipart/form-data` and processed through a dedicated pipeline:
+
+```
+Client (Postman / Frontend)
+        ↓
+Multer Middleware (file parsing & validation)
+        ↓
+Controller (request orchestration)
+        ↓
+Media Service (Cloudinary upload)
+        ↓
+Product Service (business logic)
+        ↓
+Repository (database persistence)
+```
+
+---
+
+### ⚙️ Key Components
+
+#### 1. Multer Middleware (`middleware/upload.js`)
+
+* Parses incoming `multipart/form-data`
+* Stores files in memory (`memoryStorage`)
+* Enforces file size limits (2MB)
+* Validates file type (images only)
+
+#### 2. Media Service (`services/mediaService.js`)
+
+* Handles all interactions with Cloudinary
+* Streams file buffers directly to cloud storage
+* Returns a secure hosted URL (`image_url`)
+
+#### 3. Product Controller
+
+* Detects optional file uploads
+* Sends file buffer to media service
+* Combines uploaded image URL with product data
+
+#### 4. Database Layer
+
+* Stores only the `image_url` (not the file itself)
+* Keeps the API stateless and scalable
+
+---
+
+### 🌐 Why Cloud Storage?
+
+Images are hosted using a CDN-backed service (Cloudinary), allowing:
+
+* Fast global delivery
+* No server-side file storage
+* Better scalability and performance
+
+---
+
+### 🚀 Example Request
+
+**POST /products**
+
+Body (`form-data`):
+
+| Key             | Type | Value      |
+| --------------- | ---- | ---------- |
+| name            | Text | Book Title |
+| price           | Text | 12.99      |
+| inventory_count | Text | 10         |
+| image           | File | (upload)   |
+
+---
+
+### 📦 Example Response
+
+```json
+{
+  "id": 1,
+  "name": "Book Title",
+  "price": "12.99",
+  "inventory_count": "10",
+  "image_url": "https://res.cloudinary.com/..."
+}
+```
+
+---
+
+### 🧠 Design Decisions
+
+* **Separation of concerns**
+
+  * Upload logic is isolated in a media service
+  * Product service remains focused on business logic
+
+* **Stateless API**
+
+  * Files are not stored on the server
+  * Only URLs are persisted
+
+* **Extensibility**
+
+  * Easy to swap Cloudinary for another provider (e.g. AWS S3)
+
+---
+
+### 🔮 Future Improvements
+
+* Automatic deletion of old images on update
+* Support for multiple images per product
+* Image transformations (thumbnails, resizing)
+* Role-based upload permissions (admin only)

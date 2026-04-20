@@ -12,3 +12,10 @@ CREATE TABLE orders (
 ALTER TABLE products
 ADD COLUMN image_url TEXT,
 ADD COLUMN inventory_count INTEGER DEFAULT 0;
+
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL
+);

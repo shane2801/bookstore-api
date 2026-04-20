@@ -5,6 +5,7 @@ import userRoutes from './api/routes/users.js'
 import morgan from 'morgan';
 import bodyParser from 'body-parser';
 
+
 const app = express();
 // console.log('Hello from app.js', process.env.DB_USER);
 

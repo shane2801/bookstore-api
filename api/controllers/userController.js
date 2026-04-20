@@ -2,13 +2,14 @@ import * as  userService from '../services/userService.js';
 import { createUserSchema, signinSchema } from '../validators/userValidator.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { HTTP_STATUS } from '../utils/httpStatus.js';
-import {hashPassword, verifyPassword} from '../services/hashService.js';
+import { hashPassword, verifyPassword } from '../services/hashService.js';
+import { generateToken, verifyToken } from '../services/tokenService.js'
 
 
 
 
 export const createUser = async (req, res) => {
-        try {
+    try {
 
         const { email, password } = createUserSchema.parse(req.body);
 
@@ -33,22 +34,28 @@ export const signin = async (req, res) => {
         const user = await userService.loginUser(email);
 
         if (!user) {
-            throw new Error('Invalid credentials');
+            throw new Error('No user found for that email address');
         }
 
-        // 🔐 compare password
+        //  compare password
         const isValid = await verifyPassword(user.password, password);
 
         if (!isValid) {
             throw new Error('Invalid credentials');
         }
 
-        // never return password
-        delete user.password;
+        // 🔐 generate token
+        const token = generateToken({
+            id: user.id,
+            email: user.email
+        });
+        // remove password safely
+        const { password: _, ...safeUser } = user;
 
         res.json({
             message: 'Login successful',
-            user
+            token,
+            user: safeUser
         });
 
     } catch (err) {

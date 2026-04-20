@@ -335,3 +335,8 @@ Body (`form-data`):
 * Support for multiple images per product
 * Image transformations (thumbnails, resizing)
 * Role-based upload permissions (admin only)
+
+
+generating public and private key
+openssl genrsa -out private.key 2048
+openssl rsa -in private.key -pubout -out public.key

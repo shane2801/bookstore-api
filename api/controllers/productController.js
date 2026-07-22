@@ -3,20 +3,51 @@ import { createProductSchema, updateProductSchema } from '../validators/productV
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { HTTP_STATUS } from '../utils/httpStatus.js';
 import { uploadToCloudinary } from '../services/mediaService.js';
+import { logger } from '../utils/logger.js';
 
 
 export const getAllProducts = async (req, res) => {
     try {
-        const products = await productService.getAllProducts();
+        // /products	page = 1, limit = default (e.g. 10)
+        // /products?page=2	page = 2, limit = default
+        // /products?limit=10	page = 1, limit = 10
+        // /products?page=2&limit=10	page = 2, limit = 10
+        // GET /products?all=true
+
+        const { page, limit, all } = req.query;
+
+        const isAll = all === "true";
+        const rawPage = parseInt(page, 10);
+        const rawLimit = parseInt(limit, 10);
+
+
+        const pagination = isAll ? null : {
+            page: rawPage > 0 ? rawPage : 1, //default 1
+            limit: rawLimit > 0 ? Math.min(rawLimit, 100) : 10,
+        };
+
+        logger.info(`[REQ ${req.id}] Controller: getAllProducts with parameters page: ${rawPage} and limit ${rawLimit}`)
+
+        const products = await productService.getAllProducts({pagination});
+
+        logger.info(`[REQ ${req.id}] Controller: getAllProducts returned data: `, { products });
 
         return successResponse(
-            res,
-            products,
-            'Products fetched successfully',
-            HTTP_STATUS.OK
+            res, {
+            data: products,
+            message: 'Products fetched sucessfully',
+            statusCode: HTTP_STATUS.OK
+        }
         );
     } catch (err) {
-        return errorResponse(res, err.message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+        return errorResponse(
+            res, {
+            message: 'Failed to fetch products :(',
+            statusCode: HTTP_STATUS.SERVER_ERROR,
+            code: 'PRODUCTS_FETCH_ERROR',
+            error: err
+        }
+        );
     }
 };
 
@@ -24,21 +55,36 @@ export const getProductById = async (req, res) => {
     try {
         const { id } = req.params;
 
+        logger.info(`Fetching product with id: ${id}`);
+
         const product = await productService.getProductById(id);
 
         return successResponse(
-            res,
-            product,
-            'Product fetched successfully',
-            HTTP_STATUS.OK
+            res, {
+            data: product,
+            message: 'Product fetched successfully',
+            statusCode: HTTP_STATUS.OK
+        }
         );
     } catch (err) {
-        return errorResponse(res, err.message, HTTP_STATUS.NOT_FOUND);
+        // return errorResponse(
+        //     res, {
+        //     message: 'Failed to fetch product :(',
+        //     statusCode: HTTP_STATUS.SERVER_ERROR,
+        //     code: 'PRODUCT_FETCH_ERROR',
+        //     error: err
+        // }
+        // );
+        logger.error(`Error fetching product ${req.params.id}`, {
+            error: err.message
+        });
+        next(err);
+
     }
 };
 
 export const createProduct = async (req, res) => {
-        try {
+    try {
         let image_url = null;
 
         // console.log('FILE:', req.file);
@@ -47,6 +93,8 @@ export const createProduct = async (req, res) => {
             image_url = result.secure_url;
         }
 
+        // copy everything from req.body into new object
+        // override price, inventoryCount and image_url
         const data = {
             ...req.body,
             price: Number(req.body.price),
@@ -59,15 +107,28 @@ export const createProduct = async (req, res) => {
 
         const product = await productService.createProduct(validated);
 
-        res.status(201).json(product);
+        return successResponse(
+            res, {
+            data: product,
+            message: 'Product created successfully',
+            statusCode: HTTP_STATUS.CREATED
+        }
+        );
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        return errorResponse(
+            res, {
+            message: 'Failed to create a product :(',
+            statusCode: HTTP_STATUS.BAD_REQUEST,
+            code: 'PRODUCT_CREATION_ERROR',
+            error: err
+        }
+        );
     }
 };
 
 
 export const updateProduct = async (req, res) => {
-     try {
+    try {
         const { id } = req.params;
 
         let image_url;
@@ -87,32 +148,54 @@ export const updateProduct = async (req, res) => {
             ...(image_url && { image_url })
         };
 
-        console.log(data)
+        // console.log(data)
 
         const validated = updateProductSchema.parse(data);
 
         const updatedProduct = await productService.updateProduct(id, validated);
 
-        res.json(updatedProduct);
+        return successResponse(
+            res, {
+            data: updatedProduct,
+            message: 'Product updated successfully',
+            statusCode: HTTP_STATUS.CREATED
+        }
+        );
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        return errorResponse(
+            res, {
+            message: 'Failed to patch product :(',
+            statusCode: HTTP_STATUS.BAD_REQUEST,
+            code: 'PRODUCT_PATCH_ERROR',
+            error: err
+        });
     }
 };
 
-export const deleteProduct = async (req, res) => {
+export const deleteProduct = async (req, res, next) => {
     try {
         const { id } = req.params;
 
         await productService.deleteProduct(id);
 
         return successResponse(
-            res,
-            null,
-            'Product deleted successfully',
-            HTTP_STATUS.OK
+            res, {
+            message: 'Product deleted successfully',
+            statusCode: HTTP_STATUS.OK
+        }
         );
     } catch (err) {
-        return errorResponse(res, err.message, HTTP_STATUS.NOT_FOUND);
+        // return errorResponse(
+        //     res, {
+        //     message: 'Failed to delete a product :(',
+        //     statusCode: HTTP_STATUS.NOT_FOUND,
+        //     code: 'PRODUCT_DELETION_ERROR',
+        //     error: err
+        // });
+        logger.error(`Error deleting product ${req.params.id}`, {
+            error: err.message
+        });
+        next(err)
     }
 };
 

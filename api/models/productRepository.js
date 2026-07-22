@@ -1,8 +1,35 @@
 import db from '../../config/db.js';
 
-export const fetchAllProducts = async () => {
-    const result = await db.query('SELECT * FROM products');
-    return result.rows;
+export const fetchAllProducts = async ({limit, offset}) => {
+    let query = `SELECT * FROM products WHERE 1=1`;
+  const values = [];
+
+//   if (filters?.category) {
+//     values.push(filters.category);
+//     query += ` AND category = $${values.length}`;
+//   }
+
+  query += ` ORDER BY id`;
+
+  if (limit !== undefined && offset !== undefined) {
+    values.push(limit, offset);
+    query += ` LIMIT $${values.length - 1} OFFSET $${values.length}`;
+  }
+
+  const result = await db.query(query, values);
+
+  if (limit !== undefined) {
+    const countResult = await db.query(
+      `SELECT COUNT(*) FROM products`
+    );
+
+    return {
+      rows: result.rows,
+      total: parseInt(countResult.rows[0].count, 10),
+    };
+  }
+
+  return { rows: result.rows };
 };
 
 export const findProductById = async (id) => {

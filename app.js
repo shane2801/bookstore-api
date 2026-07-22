@@ -4,16 +4,13 @@ import orderRoutes from './api/routes/orders.js'
 import userRoutes from './api/routes/users.js'
 import morgan from 'morgan';
 import bodyParser from 'body-parser';
+import { logger } from './api/utils/logger.js';
+import { errorHandler } from './api/middleware/errorMiddleware.js';
+import {requestLogger} from './api/middleware/requestLogger.js';
+import { requestId } from './api/middleware/uuidMiddleware.js';
 
 
 const app = express();
-// console.log('Hello from app.js', process.env.DB_USER);
-
-// app.use((req, res, next)=>{
-
-//     res.status(200).json({message:'It works!'});
-
-// });
 
 app.use(morgan('dev'));
 
@@ -38,6 +35,8 @@ app.use((req, res, next) => {
 })
 
 
+app.use(requestId);
+app.use(requestLogger)
 
 
 
@@ -46,20 +45,17 @@ app.use('/orders', orderRoutes);
 app.use('/users', userRoutes);
 
 
-// handle requests that reach this part (no routes handling defined)
+// handle requests that reach this part (no routes handling defined) 404 errors
 app.use((req, res, next) => {
-    const error = new Error('Not Found');
+    const error = new Error('NOT Found');
     error.status = 404;
     next(error);
 })
 
 
 
-// handle requests with errors, coming from all over the app
-app.use((error, req, res, next) => {
 
-    res.status(error.status || 500);
-    res.json({ error: { message: error.message } });
-})
+// global error handler (LAST)
+app.use(errorHandler);
 
 export default app;

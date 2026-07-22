@@ -1,46 +1,73 @@
-import * as  productRepository  from '../models/productRepository.js';
+import * as  productRepository from '../models/productRepository.js';
 
 // GET ALL
- export const getAllProducts = async () => {
-    return await productRepository.fetchAllProducts();
-};
+export const getAllProducts = async ({ pagination }) => {
 
-// GET ONE
- export const getProductById = async (id) => {
-    const product = await productRepository.findProductById(id);
+    if (!pagination) {
+        const rows = await productRepository.fetchAllProducts({
+        });
 
-    if (!product) {
-        throw new Error('Product not found');
+        return {
+            data: rows,
+            pagination: null, // explicitly indicate no pagination
+        };
     }
+    const { page, limit } = pagination;
+    const offset = (page - 1) * limit;
 
-    return product;
+    const { rows, total } = await productRepository.fetchAllProducts({
+        limit,
+        offset
+        // filters,
+    });
+
+    return {
+        data: rows,
+        pagination: {
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        },
+    };
 };
 
-// CREATE
- export const createProduct = async (data) => {
-    return await productRepository.createProduct(data);
-};
+    // GET ONE
+    export const getProductById = async (id) => {
+        const product = await productRepository.findProductById(id);
 
-// UPDATE [PATCH]
-export const updateProduct = async (id, data) => {
-    const existingProduct = await productRepository.findProductById(id);
+        if (!product) {
+            throw new Error('Product not found');
+        }
 
-    if (!existingProduct) {
-        throw new Error('Product not found');
-    }
+        return product;
+    };
 
-    return await productRepository.updateProduct(id, data);
-};
+    // CREATE
+    export const createProduct = async (data) => {
+        return await productRepository.createProduct(data);
+    };
 
-// DELETE
-export const deleteProduct = async (id) => {
-    const existingProduct = await productRepository.findProductById(id);
+    // UPDATE [PATCH]
+    export const updateProduct = async (id, data) => {
+        const existingProduct = await productRepository.findProductById(id);
 
-    if (!existingProduct) {
-        throw new Error('Product not found');
-    }
+        if (!existingProduct) {
+            throw new Error('Product not found');
+        }
 
-    await productRepository.removeProduct(id);
-};
+        return await productRepository.updateProduct(id, data);
+    };
+
+    // DELETE
+    export const deleteProduct = async (id) => {
+        const existingProduct = await productRepository.findProductById(id);
+
+        if (!existingProduct) {
+            throw new Error('Product not found');
+        }
+
+        await productRepository.removeProduct(id);
+    };
 
 

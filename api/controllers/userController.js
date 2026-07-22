@@ -3,17 +3,18 @@ import { createUserSchema, signinSchema } from '../validators/userValidator.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { HTTP_STATUS } from '../utils/httpStatus.js';
 import { hashPassword, verifyPassword } from '../services/hashService.js';
-import { generateToken, verifyToken } from '../services/tokenService.js'
+import { generateToken } from '../services/tokenService.js'
+import  {AppError} from '../utils/AppError.js'
 
 
 
 
-export const createUser = async (req, res) => {
+export const createUser = async (req, res, next) => {
     try {
 
         const { email, password } = createUserSchema.parse(req.body);
 
-        // 🔐 hash password
+        // hash password
         const hashedPassword = await hashPassword(password);
 
         const user = await userService.createUser(email, hashedPassword);
@@ -23,28 +24,30 @@ export const createUser = async (req, res) => {
             user
         });
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        // res.status(400).json({ error: err.message });
+        next(err)
+
     }
 };
 
-export const signin = async (req, res) => {
+export const signin = async (req, res, next) => {
     try {
         const { email, password } = signinSchema.parse(req.body);
 
         const user = await userService.loginUser(email);
 
         if (!user) {
-            throw new Error('No user found for that email address');
+            throw new AppError('UNAUTHORIZED: No email address for this user was found. Please create an account at https://localhost:3000/users/register', HTTP_STATUS.FAILED_AUTH);
         }
 
         //  compare password
         const isValid = await verifyPassword(user.password, password);
 
         if (!isValid) {
-            throw new Error('Invalid credentials');
+            throw new AppError('UNAUTHORIZED: Your password is incorrect.', HTTP_STATUS.FAILED_AUTH);
         }
 
-        // 🔐 generate token
+        //  generate token
         const token = generateToken({
             id: user.id,
             email: user.email
@@ -59,7 +62,8 @@ export const signin = async (req, res) => {
         });
 
     } catch (err) {
-        res.status(401).json({ error: err.message });
+        // res.status(401).json({ error: err.message });
+        next(err);
     }
 };
 
